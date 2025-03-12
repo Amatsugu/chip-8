@@ -18,7 +18,9 @@ fn main() {
 
 	let mut emu = Chip8::new();
 	emu.load_code(bytes);
-	emu.tick();
+	emu.run(9000);
+
+	emu.print_display();
 
 	println!("PC: {}", emu.program_counter);
 }
