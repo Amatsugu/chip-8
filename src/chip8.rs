@@ -95,6 +95,31 @@ impl Chip8 {
 		}
 	}
 
+	pub fn print_display(&self) {
+		if self.high_res {
+			self.print_display_high_res();
+		} else {
+			self.print_display_low_res();
+		}
+	}
+	fn print_display_low_res(&self) {
+		for row in self.display.iter().take(32) {
+			let d = format!("{:0>64}", format!("{:b}", row >> 64))
+				.replace("0", " ")
+				.replace("1", "#");
+			println!("{}", d);
+		}
+	}
+
+	fn print_display_high_res(&self) {
+		for row in self.display {
+			let d = format!("{:0>128}", format!("{:b}", row))
+				.replace("0", " ")
+				.replace("1", "#");
+			println!("{}", d);
+		}
+	}
+
 	// fn zero_registers(&mut self) -> &mut Self {
 	// 	self.registers = [0; 16];
 	// 	self.reg_st = 0;
@@ -111,6 +136,10 @@ impl Chip8 {
 
 	pub fn run(&mut self, ticks: usize) {
 		for _ in 0..ticks {
+			if self.program_counter >= self.ram.len() {
+				println!("Done!");
+				break;
+			}
 			self.tick();
 		}
 	}
@@ -147,6 +176,7 @@ impl Chip8 {
 		}
 
 		println!();
+		self.program_counter += 2;
 	}
 
 	fn instruction_draw(&mut self, instruction: u16) {
@@ -157,32 +187,6 @@ impl Chip8 {
 		let n = instruction & 0x000F;
 		println!("DRW  (V{}, V{})", regx, regy);
 		self.draw_sprite(x, y, n);
-		self.program_counter += 2;
-		self.print_display();
-	}
-	pub fn print_display(&self) {
-		if self.high_res {
-			self.print_display_high_res();
-		} else {
-			self.print_display_low_res();
-		}
-	}
-	fn print_display_low_res(&self) {
-		for row in self.display.iter().take(32) {
-			let d = format!("{:0>64}", format!("{:b}", row >> 64))
-				.replace("0", " ")
-				.replace("1", "#");
-			println!("{}", d);
-		}
-	}
-
-	fn print_display_high_res(&self) {
-		for row in self.display {
-			let d = format!("{:0>128}", format!("{:b}", row))
-				.replace("0", " ")
-				.replace("1", "#");
-			println!("{}", d);
-		}
 	}
 
 	fn draw_sprite(&mut self, x: u8, y: u8, size: u16) {
@@ -243,8 +247,6 @@ impl Chip8 {
 
 		println!("SKIP V{} != V{}", reg, reg2);
 		if self.registers[reg as usize] != self.registers[reg2 as usize] {
-			self.program_counter += 4;
-		} else {
 			self.program_counter += 2;
 		}
 	}
@@ -255,7 +257,6 @@ impl Chip8 {
 		println!("ADD V{} + {}", reg, v);
 		let rv = self.registers[reg as usize];
 		self.registers[reg as usize] = rv.saturating_add(v);
-		self.program_counter += 2;
 	}
 
 	fn instruction_set(&mut self, instruction: u16) {
@@ -263,7 +264,6 @@ impl Chip8 {
 		let v = (instruction & 0x00FF) as u8;
 		println!("SET V{} to {}", reg, v);
 		self.registers[reg as usize] = v;
-		self.program_counter += 2;
 	}
 
 	fn instruction_set_math(&mut self, instruction: u16) {
@@ -332,8 +332,6 @@ impl Chip8 {
 			}
 			_ => panic!("Invalid bitwise op"),
 		}
-
-		self.program_counter += 2;
 	}
 
 	fn instruction_skip_ne(&mut self, instruction: u16) {
@@ -342,8 +340,6 @@ impl Chip8 {
 
 		println!("SKIP V{} != {}", reg, v);
 		if self.registers[reg as usize] != v {
-			self.program_counter += 4;
-		} else {
 			self.program_counter += 2;
 		}
 	}
@@ -354,8 +350,6 @@ impl Chip8 {
 
 		println!("SKIP V{} == {}", reg, v);
 		if self.registers[reg as usize] == v {
-			self.program_counter += 4;
-		} else {
 			self.program_counter += 2;
 		}
 	}
@@ -366,8 +360,6 @@ impl Chip8 {
 
 		println!("SKIP V{} == V{}", reg, reg2);
 		if self.registers[reg as usize] == self.registers[reg2 as usize] {
-			self.program_counter += 4;
-		} else {
 			self.program_counter += 2;
 		}
 	}
@@ -390,13 +382,12 @@ impl Chip8 {
 		match instruction {
 			0x00E0 => self.instruction_clear(),
 			0x00EE => self.instruction_ret(),
-			_ => panic!("Invalid instruction: {:#x}", instruction),
+			_ => (),
 		}
 	}
 
 	fn instruction_clear(&mut self) {
 		println!("CLS");
-		self.program_counter += 2;
 	}
 
 	fn instruction_ret(&mut self) {

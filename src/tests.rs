@@ -11,7 +11,7 @@ mod tests {
 
 		emu.load_code(vec![0x13, 0x45]).tick();
 
-		assert_eq!(emu.program_counter, 0x345);
+		assert_eq!(emu.program_counter, 0x345 + 2);
 	}
 
 	#[test]
@@ -19,7 +19,7 @@ mod tests {
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x23, 0x55]).tick();
 
-		assert_eq!(emu.program_counter, 0x355);
+		assert_eq!(emu.program_counter, 0x355 + 2);
 		assert_eq!(emu.stack_pointer, 1);
 		assert_eq!(emu.stack[emu.stack_pointer], 0x200);
 	}
@@ -28,12 +28,12 @@ mod tests {
 	fn ret() {
 		let mut emu = Chip8::new();
 
-		emu.load_code(vec![0x22, 0x04, 0x00, 0xE0, 0x00, 0xEE]);
+		emu.load_code(vec![0x22, 0x02, 0x00, 0xE0, 0x00, 0xEE]);
 		emu.tick();
 		emu.tick();
 
 		assert_eq!(emu.stack_pointer, 0);
-		assert_eq!(emu.program_counter, 0x200);
+		assert_eq!(emu.program_counter, 0x200 + 2);
 	}
 
 	#[test]
@@ -276,7 +276,7 @@ mod tests {
 		emu.load_code(vec![0xB3, 0x20]);
 		emu.registers[0x0] = 0x4;
 		emu.tick();
-		assert_eq!(emu.program_counter, 0x320 + 0x4);
+		assert_eq!(emu.program_counter, 0x320 + 0x4 + 2);
 	}
 
 	#[test]
