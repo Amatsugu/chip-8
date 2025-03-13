@@ -18,7 +18,7 @@ fn main() {
 
 	let mut emu = Chip8::new();
 	emu.load_code(bytes);
-	emu.run(9000);
+	emu.start();
 
 	emu.print_display();
 

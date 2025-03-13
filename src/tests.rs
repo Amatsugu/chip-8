@@ -331,4 +331,93 @@ mod tests {
 		assert_eq!(emu.display[0], expected);
 		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
 	}
+
+	#[test]
+	fn read_dt() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF3, 0x07]);
+		emu.reg_dt = 0x3;
+		emu.tick();
+		assert_eq!(emu.registers[0x3], 0x3);
+	}
+
+	#[test]
+	fn set_dt() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF3, 0x15]);
+		emu.registers[0x3] = 0x3;
+		emu.tick();
+		assert_eq!(emu.reg_dt, 0x3);
+	}
+
+	#[test]
+	fn set_st() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF3, 0x18]);
+		emu.registers[0x3] = 0x3;
+		emu.tick();
+		assert_eq!(emu.reg_st, 0x3);
+	}
+
+	#[test]
+	fn set_vi() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF3, 0x1E]);
+		emu.registers[0x3] = 0x3;
+		emu.tick();
+		assert_eq!(emu.reg_i, 0x3);
+	}
+
+	#[test]
+	fn set_vi_to_digit() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF3, 0x29]);
+		emu.registers[0x3] = 0x3;
+		emu.tick();
+		assert_eq!(emu.reg_i, 0x3 * 5);
+	}
+
+	#[test]
+	fn set_bcd() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF3, 0x33]);
+		emu.registers[0x3] = 128;
+		emu.reg_i = 0x300;
+		emu.tick();
+		assert_eq!(emu.ram[emu.reg_i as usize], 1, "Digit 1 is incorrect");
+		assert_eq!(emu.ram[emu.reg_i as usize + 1], 2, "Digit 2 is incorrect");
+		assert_eq!(emu.ram[emu.reg_i as usize + 2], 8, "Digit 3 is incorrect");
+	}
+
+	#[test]
+	fn store() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF4, 0x55]);
+		for i in 0..0x4 {
+			emu.registers[i] = i as u8;
+		}
+		emu.registers[0x5] = 0x9;
+		emu.reg_i = 0x300;
+		emu.tick();
+		for i in 0..0x4 {
+			assert_eq!(emu.ram[emu.reg_i as usize + i], i as u8);
+		}
+		assert_eq!(emu.ram[emu.reg_i as usize + 0x5], 0, "Wrote too much");
+	}
+
+	#[test]
+	fn read() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF4, 0x65]);
+		emu.reg_i = 0x300;
+		for i in 0..0x4 {
+			emu.ram[emu.reg_i as usize + i] = i as u8;
+		}
+		emu.ram[emu.reg_i as usize + 0x5] = 0x9;
+		emu.tick();
+		for i in 0..0x3 {
+			assert_eq!(emu.registers[i], i as u8);
+		}
+		assert_eq!(emu.registers[0x5], 0, "Wrote too much");
+	}
 }
