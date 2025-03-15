@@ -188,7 +188,7 @@ impl Chip8 {
 		let g = b1 >> 4;
 
 		#[cfg(feature = "print")]
-		print!("{:#x}: ", instruction);
+		print!("[{:#x}] {:#x}: ", self.program_counter, instruction);
 
 		match g {
 			0x0 => self.instruction_zero(instruction),
@@ -263,21 +263,23 @@ impl Chip8 {
 				//Store
 				#[cfg(feature = "print")]
 				println!("STORE  V0 thru V{} to ram", reg);
-				let vx = reg as usize;
+				let vx = reg as usize + 1;
 				for r in 0..vx {
 					let i = self.reg_i as usize + r;
 					self.ram[i] = self.registers[r];
 				}
+				self.reg_i += vx as u16;
 			}
 			0x65 => {
 				//Read
 				#[cfg(feature = "print")]
 				println!("READ  V0 thru V{} from ram", reg);
-				let vx = reg as usize;
+				let vx = reg as usize + 1;
 				for r in 0..vx {
 					let i = self.reg_i as usize + r;
 					self.registers[r] = self.ram[i];
 				}
+				self.reg_i += vx as u16;
 			}
 			_ => (),
 		}
@@ -360,6 +362,7 @@ impl Chip8 {
 		#[cfg(feature = "print")]
 		println!("JUMP {} + V0", addr);
 		self.program_counter = (addr + self.registers[0] as u16) as usize;
+		self.program_counter -= 2;
 	}
 
 	fn instruction_set_reg_i(&mut self, instruction: u16) {
@@ -514,13 +517,20 @@ impl Chip8 {
 		self.stack_pointer += 1;
 		self.stack[self.stack_pointer] = self.program_counter as u16;
 		self.program_counter = addr as usize;
+		self.program_counter -= 2;
 	}
 
 	fn instruction_jump(&mut self, instruction: u16) {
-		let addr = instruction & 0x0FFF;
+		let addr = (instruction & 0x0FFF) as usize;
 		#[cfg(feature = "print")]
-		println!("JMP to {:#x}", addr);
-		self.program_counter = addr as usize;
+		{
+			println!("JMP to {:#x}", addr);
+			if addr == self.program_counter {
+				self.is_halted = true;
+			}
+		}
+		self.program_counter = addr;
+		self.program_counter -= 2;
 	}
 
 	fn instruction_zero(&mut self, instruction: u16) {

@@ -11,7 +11,7 @@ mod tests {
 
 		emu.load_code(vec![0x13, 0x45]).tick();
 
-		assert_eq!(emu.program_counter, 0x345 + 2);
+		assert_eq!(emu.program_counter, 0x345);
 	}
 
 	#[test]
@@ -19,7 +19,7 @@ mod tests {
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x23, 0x55]).tick();
 
-		assert_eq!(emu.program_counter, 0x355 + 2);
+		assert_eq!(emu.program_counter, 0x355);
 		assert_eq!(emu.stack_pointer, 1);
 		assert_eq!(emu.stack[emu.stack_pointer], 0x200);
 	}
@@ -28,12 +28,12 @@ mod tests {
 	fn ret() {
 		let mut emu = Chip8::new();
 
-		emu.load_code(vec![0x22, 0x02, 0x00, 0xE0, 0x00, 0xEE]);
+		emu.load_code(vec![0x22, 0x04, 0x00, 0xE0, 0x00, 0xEE]);
 		emu.tick();
 		emu.tick();
 
-		assert_eq!(emu.stack_pointer, 0);
-		assert_eq!(emu.program_counter, 0x200 + 2);
+		assert_eq!(emu.program_counter, 0x200 + 2, "Did not return to the correct addr");
+		assert_eq!(emu.stack_pointer, 0, "Stack pointer is incorrect");
 	}
 
 	#[test]
@@ -171,7 +171,7 @@ mod tests {
 		emu.registers[0x2] = 0x10;
 		emu.registers[0x7] = 0x33;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::saturating_sub(0x10, 0x33));
+		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0x10, 0x33));
 		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
 	}
 	#[test]
@@ -181,7 +181,7 @@ mod tests {
 		emu.registers[0x2] = 0xF0;
 		emu.registers[0x7] = 0x33;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::saturating_sub(0xF0, 0x33));
+		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0xF0, 0x33));
 		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
 	}
 
@@ -212,7 +212,7 @@ mod tests {
 		emu.registers[0x2] = 0x10;
 		emu.registers[0x7] = 0x33;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::saturating_sub(0x10, 0x33));
+		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0x10, 0x33));
 		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
 	}
 	#[test]
@@ -222,7 +222,7 @@ mod tests {
 		emu.registers[0x2] = 0xF0;
 		emu.registers[0x7] = 0x33;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::saturating_sub(0xF0, 0x33));
+		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0xF0, 0x33));
 		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
 	}
 
@@ -276,7 +276,7 @@ mod tests {
 		emu.load_code(vec![0xB3, 0x20]);
 		emu.registers[0x0] = 0x4;
 		emu.tick();
-		assert_eq!(emu.program_counter, 0x320 + 0x4 + 2);
+		assert_eq!(emu.program_counter, 0x320 + 0x4);
 	}
 
 	#[test]
@@ -400,9 +400,10 @@ mod tests {
 		emu.reg_i = 0x300;
 		emu.tick();
 		for i in 0..0x4 {
-			assert_eq!(emu.ram[emu.reg_i as usize + i], i as u8);
+			assert_eq!(emu.ram[0x300 + i], i as u8);
 		}
 		assert_eq!(emu.ram[emu.reg_i as usize + 0x5], 0, "Wrote too much");
+		assert_eq!(emu.reg_i, 0x300 + 0x4 + 1, "Register I was not incremented");
 	}
 
 	#[test]
@@ -419,5 +420,20 @@ mod tests {
 			assert_eq!(emu.registers[i], i as u8);
 		}
 		assert_eq!(emu.registers[0x5], 0, "Wrote too much");
+		assert_eq!(emu.reg_i, 0x300 + 0x4 + 1, "Register I was not incremented");
+	}
+
+	#[test]
+	fn bcd_and_read() {
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xF2, 0x33, 0xF2, 0x65]);
+		emu.registers[0x2] = 128;
+		emu.reg_i = 0x300;
+		emu.tick();
+		emu.tick();
+		
+		assert_eq!(emu.registers[0x0], 1, "First Digit");
+		assert_eq!(emu.registers[0x1], 2, "Second Digit");
+		assert_eq!(emu.registers[0x2], 8, "Third Digit");
 	}
 }
