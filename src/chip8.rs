@@ -15,6 +15,7 @@ pub struct Chip8 {
 	pub reg_dt: u8,
 	pub is_halted: bool,
 	pub high_res: bool,
+	pub waiting_for_key: bool,
 
 	pub need_draw: bool,
 
@@ -36,6 +37,7 @@ impl Default for Chip8 {
 			is_halted: Default::default(),
 			need_draw: false,
 			high_res: false,
+			waiting_for_key: Default::default(),
 			keys: Default::default(),
 			timer: SystemTime::now(),
 		}
