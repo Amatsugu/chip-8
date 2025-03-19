@@ -1,26 +1,44 @@
 pub mod chip8;
+pub mod chip8_display;
 pub mod tests;
 
-use std::{env, fs};
-
-use chip8::Chip8;
+use bevy::{
+	image::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor},
+	prelude::*,
+	window::PresentMode,
+};
+use chip8_display::Chip8Plugin;
 
 fn main() {
-	let args: Vec<String> = env::args().collect();
-	if args.len() < 2 {
-		println!("No file provided");
-		return;
-	}
-	let path = &args[1];
-	let file = fs::read(path);
-
-	let bytes = file.expect("Failed to read file");
-
-	let mut emu = Chip8::new();
-	emu.load_code(bytes);
-	emu.start();
-
-	emu.print_display();
-
-	println!("PC: {}", emu.program_counter);
+	// let mut emu = Chip8Display::new(bytes);
+	App::new()
+		.add_plugins((
+			DefaultPlugins
+				.set(WindowPlugin {
+					primary_window: Some(Window {
+						title: "Chip 8".into(),
+						name: Some("Chip8".into()),
+						#[cfg(debug_assertions)]
+						resolution: (640., 320.).into(),
+						present_mode: PresentMode::AutoNoVsync,
+						..default()
+					}),
+					..default()
+				})
+				.set(ImagePlugin {
+					default_sampler: ImageSamplerDescriptor {
+						address_mode_u: ImageAddressMode::Repeat,
+						address_mode_v: ImageAddressMode::Repeat,
+						mag_filter: ImageFilterMode::Nearest,
+						..default()
+					},
+				})
+				.set(AssetPlugin {
+					// #[cfg(not(debug_assertions))]
+					watch_for_changes_override: Some(true),
+					..Default::default()
+				}),
+			Chip8Plugin,
+		))
+		.run();
 }

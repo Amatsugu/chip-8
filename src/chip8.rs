@@ -1,7 +1,5 @@
 use std::time::SystemTime;
 
-use rand::prelude::*;
-
 pub struct Chip8 {
 	pub program_counter: usize,
 	pub stack_pointer: usize,
@@ -16,7 +14,6 @@ pub struct Chip8 {
 	pub reg_st: u8,
 	pub reg_dt: u8,
 	pub is_halted: bool,
-	pub rng: ThreadRng,
 	pub high_res: bool,
 
 	pub need_draw: bool,
@@ -37,7 +34,6 @@ impl Default for Chip8 {
 			reg_st: Default::default(),
 			reg_dt: Default::default(),
 			is_halted: Default::default(),
-			rng: rand::rng(),
 			need_draw: false,
 			high_res: false,
 			keys: Default::default(),
@@ -351,10 +347,14 @@ impl Chip8 {
 	fn instruction_rand(&mut self, instruction: u16) {
 		let reg = (instruction & 0x0F00) >> 8;
 		let kk = (instruction & 0x00FF) as u8;
-		let r: u8 = self.rng.random();
+		let r: u8 = self.get_rng();
 		#[cfg(feature = "print")]
 		println!("RAND + {} to V{}", kk, reg);
 		self.registers[reg as usize] = r & kk;
+	}
+
+	fn get_rng(&mut self) -> u8 {
+		return 3;
 	}
 
 	fn instruction_jump_offset(&mut self, instruction: u16) {

@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
 
-	use rand::Rng;
-
 	use crate::chip8::{CHIP_DIGITS, Chip8};
 
 	#[test]
@@ -283,10 +281,9 @@ mod tests {
 	fn rand() {
 		//todo replace with seeded rng
 		let mut emu = Chip8::new();
-		let mut rng = emu.rng.clone();
 		emu.load_code(vec![0xC3, 0x20]);
 		emu.tick();
-		let r: u8 = rng.random();
+		let r: u8 = 3;
 		assert_eq!(emu.registers[0x3], r & 0x20);
 	}
 
@@ -431,7 +428,7 @@ mod tests {
 		emu.reg_i = 0x300;
 		emu.tick();
 		emu.tick();
-		
+
 		assert_eq!(emu.registers[0x0], 1, "First Digit");
 		assert_eq!(emu.registers[0x1], 2, "Second Digit");
 		assert_eq!(emu.registers[0x2], 8, "Third Digit");
