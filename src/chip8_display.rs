@@ -1,7 +1,8 @@
-use std::{env, fs, str};
+use std::{env, fs};
 
 use bevy::{asset::RenderAssetUsages, prelude::*};
 use image::ImageBuffer;
+use iyes_perf_ui::{PerfUiPlugin, prelude::PerfUiEntryFPS};
 use rayon::prelude::*;
 
 use crate::chip8::Chip8;
@@ -29,6 +30,13 @@ impl Plugin for Chip8Plugin {
 		app.insert_resource(Chip8CPU(cpu));
 		app.add_systems(Startup, setup);
 		app.add_systems(Update, (chip_input, chip_tick, chip_render).chain());
+
+		#[cfg(debug_assertions)]
+		{
+			use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
+			app.add_plugins(FrameTimeDiagnosticsPlugin::default())
+				.add_plugins(PerfUiPlugin);
+		}
 	}
 }
 
@@ -36,6 +44,8 @@ impl Plugin for Chip8Plugin {
 struct DisplayImage(pub Handle<Image>);
 
 fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chip8CPU>) {
+	#[cfg(debug_assertions)]
+	commands.spawn(PerfUiEntryFPS::default());
 	commands.spawn(Camera2d);
 	let img_data = render_image(
 		cpu.0.display.clone(),
@@ -58,8 +68,8 @@ fn chip_render(mut cpu: ResMut<Chip8CPU>, mut images: ResMut<Assets<Image>>, img
 	let img_data = render_image(
 		cpu.0.display.clone(),
 		cpu.0.high_res,
-		LinearRgba::BLACK,
-		LinearRgba::BLUE,
+		LinearRgba::rgb(89. / 255., 0., 36. / 255.),
+		LinearRgba::rgb(255. / 255., 0., 100. / 255.),
 	);
 	images.insert(
 		img.0.id(),
@@ -72,9 +82,7 @@ fn chip_tick(mut cpu: ResMut<Chip8CPU>) {
 	if cpu.0.is_halted {
 		return;
 	}
-	while !cpu.0.need_draw {
-		cpu.0.tick();
-	}
+	cpu.0.run(8);
 }
 
 fn chip_input(mut cpu: ResMut<Chip8CPU>) {}
