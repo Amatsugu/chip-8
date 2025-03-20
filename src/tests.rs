@@ -207,8 +207,8 @@ mod tests {
 	fn math_bit_subn_borrow() {
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x77]);
-		emu.registers[0x2] = 0x10;
-		emu.registers[0x7] = 0x33;
+		emu.registers[0x2] = 0x33;
+		emu.registers[0x7] = 0x10;
 		emu.tick();
 		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0x10, 0x33));
 		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
@@ -217,8 +217,8 @@ mod tests {
 	fn math_bit_subn() {
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x77]);
-		emu.registers[0x2] = 0xF0;
-		emu.registers[0x7] = 0x33;
+		emu.registers[0x2] = 0x33;
+		emu.registers[0x7] = 0xF0;
 		emu.tick();
 		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0xF0, 0x33));
 		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
@@ -281,10 +281,10 @@ mod tests {
 	fn rand() {
 		//todo replace with seeded rng
 		let mut emu = Chip8::new();
-		emu.load_code(vec![0xC3, 0x20]);
+		emu.load_code(vec![0xC3, 0x0f]);
+		emu.registers[0x3] = 0xff;
 		emu.tick();
-		let r: u8 = 3;
-		assert_eq!(emu.registers[0x3], r & 0x20);
+		assert_ne!(emu.registers[0x3], 0xff);
 	}
 
 	#[test]

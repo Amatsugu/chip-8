@@ -21,6 +21,7 @@ fn main() {
 						#[cfg(debug_assertions)]
 						resolution: (640., 320.).into(),
 						present_mode: PresentMode::AutoNoVsync,
+						resizable: false.into(),
 						..default()
 					}),
 					..default()
@@ -32,11 +33,6 @@ fn main() {
 						mag_filter: ImageFilterMode::Nearest,
 						..default()
 					},
-				})
-				.set(AssetPlugin {
-					// #[cfg(not(debug_assertions))]
-					watch_for_changes_override: Some(true),
-					..Default::default()
 				}),
 			Chip8Plugin,
 		))

@@ -82,10 +82,32 @@ fn chip_tick(mut cpu: ResMut<Chip8CPU>) {
 	if cpu.0.is_halted {
 		return;
 	}
-	cpu.0.run(8);
+	while !cpu.0.need_draw {
+		cpu.0.tick();
+	}
 }
 
-fn chip_input(mut cpu: ResMut<Chip8CPU>) {}
+fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>) {
+	cpu.0.set_key(0x1, key.pressed(KeyCode::Digit1));
+	cpu.0.set_key(0x2, key.pressed(KeyCode::Digit2));
+	cpu.0.set_key(0x3, key.pressed(KeyCode::Digit3));
+	cpu.0.set_key(0xC, key.pressed(KeyCode::Digit4));
+	
+	cpu.0.set_key(0x4, key.pressed(KeyCode::KeyQ));
+	cpu.0.set_key(0x5, key.pressed(KeyCode::KeyW));
+	cpu.0.set_key(0x6, key.pressed(KeyCode::KeyE));
+	cpu.0.set_key(0xD, key.pressed(KeyCode::KeyR));
+
+	cpu.0.set_key(0x7, key.pressed(KeyCode::KeyA));
+	cpu.0.set_key(0x8, key.pressed(KeyCode::KeyS));
+	cpu.0.set_key(0x9, key.pressed(KeyCode::KeyD));
+	cpu.0.set_key(0xE, key.pressed(KeyCode::KeyF));
+
+	cpu.0.set_key(0xA, key.pressed(KeyCode::KeyZ));
+	cpu.0.set_key(0x0, key.pressed(KeyCode::KeyX));
+	cpu.0.set_key(0xB, key.pressed(KeyCode::KeyC));
+	cpu.0.set_key(0xF, key.pressed(KeyCode::KeyV));
+}
 
 pub fn render_image(
 	data: [u128; 64],

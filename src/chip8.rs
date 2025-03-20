@@ -1,5 +1,9 @@
 use std::time::SystemTime;
 
+use bevy::math::bool;
+use rand::{RngCore, SeedableRng};
+use rand_pcg::Pcg32;
+
 pub struct Chip8 {
 	pub program_counter: usize,
 	pub stack_pointer: usize,
@@ -15,11 +19,11 @@ pub struct Chip8 {
 	pub reg_dt: u8,
 	pub is_halted: bool,
 	pub high_res: bool,
-	pub waiting_for_key: bool,
 
 	pub need_draw: bool,
 
 	timer: SystemTime,
+	rng: Pcg32,
 }
 
 impl Default for Chip8 {
@@ -37,9 +41,9 @@ impl Default for Chip8 {
 			is_halted: Default::default(),
 			need_draw: false,
 			high_res: false,
-			waiting_for_key: Default::default(),
 			keys: Default::default(),
 			timer: SystemTime::now(),
+			rng: Pcg32::from_os_rng(),
 		}
 	}
 }
@@ -178,6 +182,10 @@ impl Chip8 {
 		}
 	}
 
+	pub fn set_key(&mut self, key: usize, state: bool) {
+		self.keys[key] = state;
+	}
+
 	fn process_instructions(&mut self) {
 		let b1 = &self.ram[self.program_counter];
 		let b2 = &self.ram[self.program_counter + 1];
@@ -223,7 +231,23 @@ impl Chip8 {
 				println!("SET  V{} to DT", reg);
 				self.registers[reg as usize] = self.reg_dt;
 			}
-			0x0A => todo!(),
+			0x0A => {
+				//Get Key
+				#[cfg(feature = "print")]
+				println!("Wait for Any Key", reg);
+				let mut key = None;
+				for k in 0..16 {
+					if self.keys[k] {
+						key = Some(k);
+						break;
+					}
+				}
+				if let Some(k) = key {
+					self.registers[reg as usize] = k as u8;
+				} else {
+					self.program_counter -= 2;
+				}
+			}
 			0x15 => {
 				//Set DT
 				#[cfg(feature = "print")]
@@ -356,7 +380,7 @@ impl Chip8 {
 	}
 
 	fn get_rng(&mut self) -> u8 {
-		return 3;
+		return self.rng.next_u32() as u8;
 	}
 
 	fn instruction_jump_offset(&mut self, instruction: u16) {
@@ -385,6 +409,7 @@ impl Chip8 {
 		}
 	}
 
+	//7XNN
 	fn instruction_add(&mut self, instruction: u16) {
 		let reg = (instruction & 0x0F00) >> 8;
 		let v = (instruction & 0x00FF) as u8;
@@ -402,6 +427,7 @@ impl Chip8 {
 		self.registers[reg as usize] = v;
 	}
 
+	//8XYN
 	fn instruction_set_math(&mut self, instruction: u16) {
 		let reg = (instruction & 0x0F00) >> 8;
 		let reg2 = (instruction & 0x00F0) >> 4;
@@ -464,8 +490,8 @@ impl Chip8 {
 				println!("SUBN V{} - V{}", reg, reg2);
 				let vx = self.registers[reg as usize];
 				let vy = self.registers[reg2 as usize];
-				self.registers[0xf] = if vx < vy { 1 } else { 0 };
-				self.registers[reg as usize] = vx.wrapping_sub(vy);
+				self.registers[0xf] = if vy < vx { 1 } else { 0 };
+				self.registers[reg as usize] = vy.wrapping_sub(vx);
 			}
 			0xE => {
 				//SHL
