@@ -51,7 +51,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chi
 		cpu.0.display.clone(),
 		cpu.0.high_res,
 		LinearRgba::BLACK,
-		LinearRgba::BLUE,
+		LinearRgba::BLACK,
 	);
 	let handle = images.add(Image::from_dynamic(
 		img_data.into(),
@@ -82,9 +82,7 @@ fn chip_tick(mut cpu: ResMut<Chip8CPU>) {
 	if cpu.0.is_halted {
 		return;
 	}
-	while !cpu.0.need_draw {
-		cpu.0.tick();
-	}
+	cpu.0.run(4);
 }
 
 fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>) {
@@ -92,7 +90,7 @@ fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>) {
 	cpu.0.set_key(0x2, key.pressed(KeyCode::Digit2));
 	cpu.0.set_key(0x3, key.pressed(KeyCode::Digit3));
 	cpu.0.set_key(0xC, key.pressed(KeyCode::Digit4));
-	
+
 	cpu.0.set_key(0x4, key.pressed(KeyCode::KeyQ));
 	cpu.0.set_key(0x5, key.pressed(KeyCode::KeyW));
 	cpu.0.set_key(0x6, key.pressed(KeyCode::KeyE));
