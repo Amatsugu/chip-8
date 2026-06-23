@@ -2,6 +2,8 @@ pub mod chip8;
 pub mod chip8_display;
 pub mod tests;
 
+#[cfg(debug_assertions)]
+use bevy::window::WindowResolution;
 use bevy::{
 	image::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor},
 	prelude::*,
@@ -9,7 +11,8 @@ use bevy::{
 };
 use chip8_display::Chip8Plugin;
 
-fn main() {
+fn main()
+{
 	// let mut emu = Chip8Display::new(bytes);
 	App::new()
 		.add_plugins((
@@ -19,9 +22,9 @@ fn main() {
 						title: "Chip 8".into(),
 						name: Some("Chip8".into()),
 						#[cfg(debug_assertions)]
-						resolution: (640., 320.).into(),
+						resolution: WindowResolution::new(640., 320.),
 						present_mode: PresentMode::AutoNoVsync,
-						resizable: false.into(),
+						resizable: false,
 						..default()
 					}),
 					..default()

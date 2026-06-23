@@ -4,12 +4,13 @@ use bevy::math::bool;
 use rand::{RngCore, SeedableRng};
 use rand_pcg::Pcg32;
 
-pub struct Chip8 {
+pub struct Chip8
+{
 	pub program_counter: usize,
 	pub stack_pointer: usize,
 	pub registers: [u8; 16],
 	pub reg_i: u16,
-	pub ram: Vec<u8>,
+	pub ram: [u8; MEMORY_CAPACITY],
 	pub stack: [u16; 16],
 
 	pub keys: [bool; 16],
@@ -26,14 +27,16 @@ pub struct Chip8 {
 	rng: Pcg32,
 }
 
-impl Default for Chip8 {
-	fn default() -> Self {
+impl Default for Chip8
+{
+	fn default() -> Self
+	{
 		Self {
 			program_counter: Default::default(),
 			stack_pointer: Default::default(),
 			registers: Default::default(),
 			reg_i: Default::default(),
-			ram: Default::default(),
+			ram: [0; MEMORY_CAPACITY],
 			stack: Default::default(),
 			display: [0; 64],
 			reg_st: Default::default(),
@@ -66,56 +69,70 @@ pub const CHIP_DIGITS: [u8; 16 * 5] = [
 	0xF0, 0x80, 0xF0, 0x80, 0xF0, //E
 	0xF0, 0x80, 0xF0, 0x80, 0x80, //F
 ];
+const MEMORY_CAPACITY: usize = 4096;
 
-impl Chip8 {
-	pub fn new() -> Self {
+impl Chip8
+{
+	pub fn new() -> Self
+	{
 		let mem = Self::init();
-		return Chip8 {
+		Chip8 {
 			ram: mem,
 			..Default::default()
-		};
+		}
 	}
 
-	pub fn init() -> Vec<u8> {
-		let mut mem = Vec::with_capacity(4096);
-		for i in 0..mem.capacity() {
-			if i < CHIP_DIGITS.len() {
-				mem.push(CHIP_DIGITS[i]);
-			} else {
-				mem.push(0);
+	pub fn init() -> [u8; MEMORY_CAPACITY]
+	{
+		let mut mem = [0; MEMORY_CAPACITY];
+		for (i, mem_entry) in mem.iter_mut().enumerate()
+		{
+			if i < CHIP_DIGITS.len()
+			{
+				*mem_entry = CHIP_DIGITS[i];
 			}
 		}
-		return mem;
+		mem
 	}
 
-	pub fn load_code(&mut self, code: Vec<u8>) -> &mut Self {
+	pub fn load_code(&mut self, code: Vec<u8>) -> &mut Self
+	{
 		self.program_counter = 0x200;
 		self.load(code);
-		return self;
+		self
 	}
 
-	pub fn load_code_eti(&mut self, code: Vec<u8>) -> &mut Self {
+	pub fn load_code_eti(&mut self, code: Vec<u8>) -> &mut Self
+	{
 		self.program_counter = 0x600;
 		self.load(code);
-		return self;
+		self
 	}
 
-	fn load(&mut self, code: Vec<u8>) {
+	fn load(&mut self, code: Vec<u8>)
+	{
 		println!("Loading Program, Length: {}", code.len());
-		for i in 0..code.len() {
-			self.ram[i + self.program_counter] = code[i]
+		for (i, code_line) in code.iter().enumerate()
+		{
+			self.ram[i + self.program_counter] = *code_line;
 		}
 	}
 
-	pub fn print_display(&self) {
-		if self.high_res {
+	pub fn print_display(&self)
+	{
+		if self.high_res
+		{
 			self.print_display_high_res();
-		} else {
+		}
+		else
+		{
 			self.print_display_low_res();
 		}
 	}
-	fn print_display_low_res(&self) {
-		for row in self.display.iter().take(32) {
+	fn print_display_low_res(&self)
+	{
+		for row in self.display.iter().take(32)
+		{
 			let d = format!("{:0>64}", format!("{:b}", row >> 64))
 				.replace("0", " ")
 				.replace("1", "#");
@@ -123,8 +140,10 @@ impl Chip8 {
 		}
 	}
 
-	fn print_display_high_res(&self) {
-		for row in self.display {
+	fn print_display_high_res(&self)
+	{
+		for row in self.display
+		{
 			let d = format!("{:0>128}", format!("{:b}", row))
 				.replace("0", " ")
 				.replace("1", "#");
@@ -140,10 +159,13 @@ impl Chip8 {
 	// 	return self;
 	// }
 
-	pub fn start(&mut self) {
-		while !self.is_halted {
+	pub fn start(&mut self)
+	{
+		while !self.is_halted
+		{
 			self.tick();
-			if self.need_draw {
+			if self.need_draw
+			{
 				self.need_draw = false;
 				print!("\x1B[2J\x1B[1;1H");
 				self.print_display();
@@ -151,9 +173,12 @@ impl Chip8 {
 		}
 	}
 
-	pub fn run(&mut self, ticks: usize) {
-		for _ in 0..ticks {
-			if self.program_counter >= self.ram.len() {
+	pub fn run(&mut self, ticks: usize)
+	{
+		for _ in 0..ticks
+		{
+			if self.program_counter >= self.ram.len()
+			{
 				println!("Done!");
 				self.is_halted = true;
 				break;
@@ -162,31 +187,37 @@ impl Chip8 {
 		}
 	}
 
-	pub fn tick(&mut self) {
+	pub fn tick(&mut self)
+	{
 		self.process_instructions();
-		if let Ok(el) = self.timer.elapsed() {
-			if el.as_millis() > 16 {
-				self.process_timers();
-				self.timer = SystemTime::now();
-			}
+		if let Ok(el) = self.timer.elapsed()
+			&& el.as_millis() > 16
+		{
+			self.process_timers();
+			self.timer = SystemTime::now();
 		}
 		self.program_counter += 2;
 	}
 
-	fn process_timers(&mut self) {
-		if self.reg_dt > 0 {
+	fn process_timers(&mut self)
+	{
+		if self.reg_dt > 0
+		{
 			self.reg_dt -= 1;
 		}
-		if self.reg_st > 0 {
+		if self.reg_st > 0
+		{
 			self.reg_st -= 1;
 		}
 	}
 
-	pub fn set_key(&mut self, key: usize, state: bool) {
+	pub fn set_key(&mut self, key: usize, state: bool)
+	{
 		self.keys[key] = state;
 	}
 
-	fn process_instructions(&mut self) {
+	fn process_instructions(&mut self)
+	{
 		let b1 = &self.ram[self.program_counter];
 		let b2 = &self.ram[self.program_counter + 1];
 		let instruction = ((*b1 as u16) << 8) + (*b2 as u16);
@@ -196,7 +227,8 @@ impl Chip8 {
 		#[cfg(feature = "print")]
 		print!("[{:#x}] {:#x}: ", self.program_counter, instruction);
 
-		match g {
+		match g
+		{
 			0x0 => self.instruction_zero(instruction),
 			0x1 => self.instruction_jump(instruction),
 			0x2 => self.instruction_call(instruction),
@@ -220,59 +252,73 @@ impl Chip8 {
 		println!();
 	}
 
-	fn instruction_f(&mut self, instruction: u16) {
+	fn instruction_f(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let mode = instruction & 0x00FF;
 
-		match mode {
-			0x07 => {
+		match mode
+		{
+			0x07 =>
+			{
 				//Read DT
 				#[cfg(feature = "print")]
 				println!("SET  V{} to DT", reg);
 				self.registers[reg as usize] = self.reg_dt;
 			}
-			0x0A => {
+			0x0A =>
+			{
 				//Get Key
 				#[cfg(feature = "print")]
 				println!("Wait for Any Key", reg);
 				let mut key = None;
-				for k in 0..16 {
-					if self.keys[k] {
+				for k in 0..16
+				{
+					if self.keys[k]
+					{
 						key = Some(k);
 						break;
 					}
 				}
-				if let Some(k) = key {
+				if let Some(k) = key
+				{
 					self.registers[reg as usize] = k as u8;
-				} else {
+				}
+				else
+				{
 					self.program_counter -= 2;
 				}
 			}
-			0x15 => {
+			0x15 =>
+			{
 				//Set DT
 				#[cfg(feature = "print")]
 				println!("SET  DT to V{}", reg);
 				self.reg_dt = self.registers[reg as usize];
 			}
-			0x18 => {
+			0x18 =>
+			{
 				//Set ST
 				#[cfg(feature = "print")]
 				println!("SET  ST to V{}", reg);
 				self.reg_st = self.registers[reg as usize];
 			}
-			0x1E => {
+			0x1E =>
+			{
 				//Set VI
 				#[cfg(feature = "print")]
 				println!("SET  VI to V{}", reg);
 				self.reg_i += self.registers[reg as usize] as u16;
 			}
-			0x29 => {
+			0x29 =>
+			{
 				//Set VI to Digit
 				#[cfg(feature = "print")]
 				println!("SET  VI to Digit of V{}", reg);
 				self.reg_i = self.registers[reg as usize] as u16 * 5;
 			}
-			0x33 => {
+			0x33 =>
+			{
 				//Set BCD
 				#[cfg(feature = "print")]
 				println!("SET  VI to Digit of V{}", reg);
@@ -281,23 +327,27 @@ impl Chip8 {
 				self.ram[self.reg_i as usize + 1] = (vx / 10) - ((vx / 100) * 10);
 				self.ram[self.reg_i as usize + 2] = vx - ((vx / 10) * 10);
 			}
-			0x55 => {
+			0x55 =>
+			{
 				//Store
 				#[cfg(feature = "print")]
 				println!("STORE  V0 thru V{} to ram", reg);
 				let vx = reg as usize + 1;
-				for r in 0..vx {
+				for r in 0..vx
+				{
 					let i = self.reg_i as usize + r;
 					self.ram[i] = self.registers[r];
 				}
 				self.reg_i += vx as u16;
 			}
-			0x65 => {
+			0x65 =>
+			{
 				//Read
 				#[cfg(feature = "print")]
 				println!("READ  V0 thru V{} from ram", reg);
 				let vx = reg as usize + 1;
-				for r in 0..vx {
+				for r in 0..vx
+				{
 					let i = self.reg_i as usize + r;
 					self.registers[r] = self.ram[i];
 				}
@@ -307,26 +357,27 @@ impl Chip8 {
 		}
 	}
 
-	fn instruction_key(&mut self, instruction: u16) {
+	fn instruction_key(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let mode = instruction & 0x00FF;
 		let k = self.registers[reg as usize];
-		match mode {
-			0x9E => {
-				if self.keys[k as usize] {
-					self.program_counter += 2;
-				}
+		match mode
+		{
+			0x9E if self.keys[k as usize] =>
+			{
+				self.program_counter += 2;
 			}
-			0xA1 => {
-				if !self.keys[k as usize] {
-					self.program_counter += 2;
-				}
+			0xA1 if !self.keys[k as usize] =>
+			{
+				self.program_counter += 2;
 			}
 			_ => (),
 		};
 	}
 
-	fn instruction_draw(&mut self, instruction: u16) {
+	fn instruction_draw(&mut self, instruction: u16)
+	{
 		let regx = (instruction & 0x0F00) >> 8;
 		let regy = (instruction & 0x00F0) >> 4;
 		let x = self.registers[regx as usize];
@@ -338,39 +389,50 @@ impl Chip8 {
 		self.draw_sprite(x, y, n);
 	}
 
-	fn draw_sprite(&mut self, x: u8, y: u8, size: u16) {
+	fn draw_sprite(&mut self, x: u8, y: u8, size: u16)
+	{
 		let slice = self.ram.iter().skip(self.reg_i as usize).take(size as usize);
 		let mut s_y = y as usize;
-		for row in slice {
+		for row in slice
+		{
 			let data = self.translate_sprite_row(*row, x);
 			let orig = self.display[s_y];
 			self.display[s_y] = orig ^ data;
 
-			if self.display[s_y] != orig | data {
+			if self.display[s_y] != orig | data
+			{
 				self.registers[0xF] = 1;
 			}
 
 			s_y += 1;
-			if self.high_res {
-				s_y = s_y % 64;
-			} else {
-				s_y = s_y % 32;
+			if self.high_res
+			{
+				s_y %= 64;
+			}
+			else
+			{
+				s_y %= 32;
 			}
 		}
 	}
 
-	fn translate_sprite_row(&self, row: u8, x: u8) -> u128 {
-		if self.high_res {
+	fn translate_sprite_row(&self, row: u8, x: u8) -> u128
+	{
+		if self.high_res
+		{
 			let res = row as u128;
-			return res.rotate_left(128 - ((x as u32 + 8) % 128));
-		} else {
+			res.rotate_left(128 - ((x as u32 + 8) % 128))
+		}
+		else
+		{
 			let mut res = row as u64;
 			res = res.rotate_left(64 - ((x as u32 + 8) % 64));
-			return (res as u128) << 64;
+			(res as u128) << 64
 		}
 	}
 
-	fn instruction_rand(&mut self, instruction: u16) {
+	fn instruction_rand(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let kk = (instruction & 0x00FF) as u8;
 		let r: u8 = self.get_rng();
@@ -379,11 +441,13 @@ impl Chip8 {
 		self.registers[reg as usize] = r & kk;
 	}
 
-	fn get_rng(&mut self) -> u8 {
-		return self.rng.next_u32() as u8;
+	fn get_rng(&mut self) -> u8
+	{
+		self.rng.next_u32() as u8
 	}
 
-	fn instruction_jump_offset(&mut self, instruction: u16) {
+	fn instruction_jump_offset(&mut self, instruction: u16)
+	{
 		let addr = instruction & 0x0FFF;
 		#[cfg(feature = "print")]
 		println!("JUMP {} + V0", addr);
@@ -391,26 +455,30 @@ impl Chip8 {
 		self.program_counter -= 2;
 	}
 
-	fn instruction_set_reg_i(&mut self, instruction: u16) {
+	fn instruction_set_reg_i(&mut self, instruction: u16)
+	{
 		let addr = instruction & 0x0FFF;
 		#[cfg(feature = "print")]
 		println!("SET VI to {}", addr);
 		self.reg_i = addr;
 	}
 
-	fn instruction_skip_ne2(&mut self, instruction: u16) {
+	fn instruction_skip_ne2(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let reg2 = (instruction & 0x00F0) >> 4;
 
 		#[cfg(feature = "print")]
 		println!("SKIP V{} != V{}", reg, reg2);
-		if self.registers[reg as usize] != self.registers[reg2 as usize] {
+		if self.registers[reg as usize] != self.registers[reg2 as usize]
+		{
 			self.program_counter += 2;
 		}
 	}
 
 	//7XNN
-	fn instruction_add(&mut self, instruction: u16) {
+	fn instruction_add(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let v = (instruction & 0x00FF) as u8;
 		#[cfg(feature = "print")]
@@ -419,7 +487,8 @@ impl Chip8 {
 		self.registers[reg as usize] = rv.wrapping_add(v);
 	}
 
-	fn instruction_set(&mut self, instruction: u16) {
+	fn instruction_set(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let v = (instruction & 0x00FF) as u8;
 		#[cfg(feature = "print")]
@@ -428,36 +497,43 @@ impl Chip8 {
 	}
 
 	//8XYN
-	fn instruction_set_math(&mut self, instruction: u16) {
+	fn instruction_set_math(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let reg2 = (instruction & 0x00F0) >> 4;
 		let m = instruction & 0x000F;
-		match m {
-			0x0 => {
+		match m
+		{
+			0x0 =>
+			{
 				//Set
 				#[cfg(feature = "print")]
 				println!("SET V{} to V{}", reg, reg2);
 				self.registers[reg as usize] = self.registers[reg2 as usize];
 			}
-			0x1 => {
+			0x1 =>
+			{
 				//OR
 				#[cfg(feature = "print")]
 				println!("OR V{} | V{}", reg, reg2);
 				self.registers[reg as usize] |= self.registers[reg2 as usize];
 			}
-			0x2 => {
+			0x2 =>
+			{
 				//AND
 				#[cfg(feature = "print")]
 				println!("AND V{} & V{}", reg, reg2);
 				self.registers[reg as usize] &= self.registers[reg2 as usize];
 			}
-			0x3 => {
+			0x3 =>
+			{
 				//XOR
 				#[cfg(feature = "print")]
 				println!("XOR V{} ^ V{}", reg, reg2);
 				self.registers[reg as usize] ^= self.registers[reg2 as usize];
 			}
-			0x4 => {
+			0x4 =>
+			{
 				//Add + Carry
 				#[cfg(feature = "print")]
 				println!("ADD V{} + V{}", reg, reg2);
@@ -467,7 +543,8 @@ impl Chip8 {
 				self.registers[0xf] = if r > 255 { 1 } else { 0 };
 				self.registers[reg as usize] = (r & 0x00FF) as u8;
 			}
-			0x5 => {
+			0x5 =>
+			{
 				//Sub + Borrow
 				#[cfg(feature = "print")]
 				println!("SUB V{} - V{}", reg, reg2);
@@ -476,7 +553,8 @@ impl Chip8 {
 				self.registers[0xf] = if vx > vy { 1 } else { 0 };
 				self.registers[reg as usize] = vx.wrapping_sub(vy);
 			}
-			0x6 => {
+			0x6 =>
+			{
 				//SHR
 				#[cfg(feature = "print")]
 				println!("SHR V{} >> 1", reg);
@@ -484,7 +562,8 @@ impl Chip8 {
 				self.registers[0xf] = vx & 0x1;
 				self.registers[reg as usize] = vx >> 1;
 			}
-			0x7 => {
+			0x7 =>
+			{
 				//SubN + Borrow
 				#[cfg(feature = "print")]
 				println!("SUBN V{} - V{}", reg, reg2);
@@ -493,7 +572,8 @@ impl Chip8 {
 				self.registers[0xf] = if vy < vx { 1 } else { 0 };
 				self.registers[reg as usize] = vy.wrapping_sub(vx);
 			}
-			0xE => {
+			0xE =>
+			{
 				//SHL
 				#[cfg(feature = "print")]
 				println!("SHL V{} << 1", reg);
@@ -505,40 +585,47 @@ impl Chip8 {
 		}
 	}
 
-	fn instruction_skip_ne(&mut self, instruction: u16) {
+	fn instruction_skip_ne(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let v = (instruction & 0x00FF) as u8;
 
 		#[cfg(feature = "print")]
 		println!("SKIP V{} != {}", reg, v);
-		if self.registers[reg as usize] != v {
+		if self.registers[reg as usize] != v
+		{
 			self.program_counter += 2;
 		}
 	}
 
-	fn instruction_skip(&mut self, instruction: u16) {
+	fn instruction_skip(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let v = (instruction & 0x00FF) as u8;
 
 		#[cfg(feature = "print")]
 		println!("SKIP V{} == {}", reg, v);
-		if self.registers[reg as usize] == v {
+		if self.registers[reg as usize] == v
+		{
 			self.program_counter += 2;
 		}
 	}
 
-	fn instruction_skip2(&mut self, instruction: u16) {
+	fn instruction_skip2(&mut self, instruction: u16)
+	{
 		let reg = (instruction & 0x0F00) >> 8;
 		let reg2 = (instruction & 0x00F0) >> 4;
 
 		#[cfg(feature = "print")]
 		println!("SKIP V{} == V{}", reg, reg2);
-		if self.registers[reg as usize] == self.registers[reg2 as usize] {
+		if self.registers[reg as usize] == self.registers[reg2 as usize]
+		{
 			self.program_counter += 2;
 		}
 	}
 
-	fn instruction_call(&mut self, instruction: u16) {
+	fn instruction_call(&mut self, instruction: u16)
+	{
 		let addr = instruction & 0x0FFF;
 		#[cfg(feature = "print")]
 		println!("Call {:#x}", addr);
@@ -548,12 +635,14 @@ impl Chip8 {
 		self.program_counter -= 2;
 	}
 
-	fn instruction_jump(&mut self, instruction: u16) {
+	fn instruction_jump(&mut self, instruction: u16)
+	{
 		let addr = (instruction & 0x0FFF) as usize;
 		#[cfg(feature = "print")]
 		{
 			println!("JMP to {:#x}", addr);
-			if addr == self.program_counter {
+			if addr == self.program_counter
+			{
 				self.is_halted = true;
 			}
 		}
@@ -561,23 +650,28 @@ impl Chip8 {
 		self.program_counter -= 2;
 	}
 
-	fn instruction_zero(&mut self, instruction: u16) {
-		match instruction {
+	fn instruction_zero(&mut self, instruction: u16)
+	{
+		match instruction
+		{
 			0x00E0 => self.instruction_clear(),
 			0x00EE => self.instruction_ret(),
-			_ => {
+			_ =>
+			{
 				self.is_halted = true;
 			}
 		}
 	}
 
-	fn instruction_clear(&mut self) {
+	fn instruction_clear(&mut self)
+	{
 		#[cfg(feature = "print")]
 		println!("CLS");
 		self.display = [0; 64];
 	}
 
-	fn instruction_ret(&mut self) {
+	fn instruction_ret(&mut self)
+	{
 		#[cfg(feature = "print")]
 		println!("RET");
 		self.program_counter = self.stack[self.stack_pointer] as usize;

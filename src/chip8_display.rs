@@ -2,6 +2,7 @@ use std::{env, fs};
 
 use bevy::{asset::RenderAssetUsages, prelude::*};
 use image::ImageBuffer;
+#[cfg(debug_assertions)]
 use iyes_perf_ui::{PerfUiPlugin, prelude::PerfUiEntryFPS};
 use rayon::prelude::*;
 
@@ -12,10 +13,13 @@ pub struct Chip8Plugin;
 #[derive(Resource)]
 pub struct Chip8CPU(pub Chip8);
 
-impl Plugin for Chip8Plugin {
-	fn build(&self, app: &mut bevy::app::App) {
+impl Plugin for Chip8Plugin
+{
+	fn build(&self, app: &mut bevy::app::App)
+	{
 		let args: Vec<String> = env::args().collect();
-		if args.len() < 2 {
+		if args.len() < 2
+		{
 			println!("No file provided");
 			return;
 		}
@@ -34,8 +38,7 @@ impl Plugin for Chip8Plugin {
 		#[cfg(debug_assertions)]
 		{
 			use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-			app.add_plugins(FrameTimeDiagnosticsPlugin::default())
-				.add_plugins(PerfUiPlugin);
+			app.add_plugins(FrameTimeDiagnosticsPlugin).add_plugins(PerfUiPlugin);
 		}
 	}
 }
@@ -43,16 +46,12 @@ impl Plugin for Chip8Plugin {
 #[derive(Resource)]
 struct DisplayImage(pub Handle<Image>);
 
-fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chip8CPU>) {
+fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chip8CPU>)
+{
 	#[cfg(debug_assertions)]
 	commands.spawn(PerfUiEntryFPS::default());
 	commands.spawn(Camera2d);
-	let img_data = render_image(
-		cpu.0.display.clone(),
-		cpu.0.high_res,
-		LinearRgba::BLACK,
-		LinearRgba::BLACK,
-	);
+	let img_data = render_image(cpu.0.display, cpu.0.high_res, LinearRgba::BLACK, LinearRgba::BLACK);
 	let handle = images.add(Image::from_dynamic(
 		img_data.into(),
 		true,
@@ -64,12 +63,13 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chi
 	commands.insert_resource(DisplayImage(handle));
 }
 
-fn chip_render(mut cpu: ResMut<Chip8CPU>, mut images: ResMut<Assets<Image>>, img: Res<DisplayImage>) {
+fn chip_render(mut cpu: ResMut<Chip8CPU>, mut images: ResMut<Assets<Image>>, img: Res<DisplayImage>)
+{
 	let img_data = render_image(
-		cpu.0.display.clone(),
+		cpu.0.display,
 		cpu.0.high_res,
 		LinearRgba::rgb(89. / 255., 0., 36. / 255.),
-		LinearRgba::rgb(255. / 255., 0., 100. / 255.),
+		LinearRgba::rgb(1., 0., 100. / 255.),
 	);
 	images.insert(
 		img.0.id(),
@@ -78,14 +78,17 @@ fn chip_render(mut cpu: ResMut<Chip8CPU>, mut images: ResMut<Assets<Image>>, img
 	cpu.0.need_draw = false;
 }
 
-fn chip_tick(mut cpu: ResMut<Chip8CPU>) {
-	if cpu.0.is_halted {
+fn chip_tick(mut cpu: ResMut<Chip8CPU>)
+{
+	if cpu.0.is_halted
+	{
 		return;
 	}
 	cpu.0.run(4);
 }
 
-fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>) {
+fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>)
+{
 	cpu.0.set_key(0x1, key.pressed(KeyCode::Digit1));
 	cpu.0.set_key(0x2, key.pressed(KeyCode::Digit2));
 	cpu.0.set_key(0x3, key.pressed(KeyCode::Digit3));
@@ -112,30 +115,35 @@ pub fn render_image(
 	high_res: bool,
 	color1: LinearRgba,
 	color2: LinearRgba,
-) -> ImageBuffer<image::Rgba<u8>, Vec<u8>> {
+) -> ImageBuffer<image::Rgba<u8>, Vec<u8>>
+{
 	let mut image = ImageBuffer::new(128, 64);
 
 	image.par_enumerate_pixels_mut().for_each(|(x, y, pixel)| {
-		if !high_res {
+		if !high_res
+		{
 			let line = &data[(y / 2) as usize] >> 64;
-			let mask = (1 as u64).rotate_left(63 - (x / 2));
+			let mask = 1_u64.rotate_left(63 - (x / 2));
 			let col = if line as u64 & mask == 0 { color1 } else { color2 };
 			*pixel = to_pixel(&col);
-		} else {
+		}
+		else
+		{
 			let line = &data[y as usize];
-			let mask = (1 as u128).rotate_left(128 - x);
+			let mask = 1_u128.rotate_left(128 - x);
 			let col = if line & mask == 0 { color1 } else { color2 };
 			*pixel = to_pixel(&col);
 		}
 	});
-	return image;
+	image
 }
 
-fn to_pixel(col: &LinearRgba) -> image::Rgba<u8> {
-	return image::Rgba([
+fn to_pixel(col: &LinearRgba) -> image::Rgba<u8>
+{
+	image::Rgba([
 		(col.red * 255.0) as u8,
 		(col.green * 255.0) as u8,
 		(col.blue * 255.0) as u8,
 		255,
-	]);
+	])
 }
