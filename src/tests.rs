@@ -1,10 +1,12 @@
 #[cfg(test)]
-mod tests {
+mod tests
+{
 
 	use crate::chip8::{CHIP_DIGITS, Chip8};
 
 	#[test]
-	fn jump() {
+	fn jump()
+	{
 		let mut emu = Chip8::new();
 
 		emu.load_code(vec![0x13, 0x45]).tick();
@@ -13,7 +15,8 @@ mod tests {
 	}
 
 	#[test]
-	fn call() {
+	fn call()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x23, 0x55]).tick();
 
@@ -23,7 +26,8 @@ mod tests {
 	}
 
 	#[test]
-	fn ret() {
+	fn ret()
+	{
 		let mut emu = Chip8::new();
 
 		emu.load_code(vec![0x22, 0x04, 0x00, 0xE0, 0x00, 0xEE]);
@@ -35,7 +39,8 @@ mod tests {
 	}
 
 	#[test]
-	fn skip_eq() {
+	fn skip_eq()
+	{
 		let mut emu = Chip8::new();
 		emu.registers[0x3] = 0x33;
 
@@ -50,7 +55,8 @@ mod tests {
 	}
 
 	#[test]
-	fn skip_ne() {
+	fn skip_ne()
+	{
 		let mut emu = Chip8::new();
 		emu.registers[0x3] = 0x33;
 
@@ -65,7 +71,8 @@ mod tests {
 	}
 
 	#[test]
-	fn skip_eq2() {
+	fn skip_eq2()
+	{
 		let mut emu = Chip8::new();
 		emu.registers[0x3] = 0x33;
 		emu.registers[0x4] = 0x33;
@@ -81,7 +88,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_register() {
+	fn set_register()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x63, 0x40]).tick();
 
@@ -89,7 +97,8 @@ mod tests {
 	}
 
 	#[test]
-	fn add() {
+	fn add()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x72, 0x70]);
 		emu.registers[0x2] = 0x01;
@@ -99,7 +108,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_copy() {
+	fn math_copy()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x70]);
 		emu.registers[0x2] = 0x10;
@@ -110,7 +120,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_or() {
+	fn math_bit_or()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x71]);
 		emu.registers[0x2] = 0x10;
@@ -120,7 +131,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_and() {
+	fn math_bit_and()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x72]);
 		emu.registers[0x2] = 0x10;
@@ -130,7 +142,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_xor() {
+	fn math_bit_xor()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x73]);
 		emu.registers[0x2] = 0x10;
@@ -140,7 +153,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_add() {
+	fn math_bit_add()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x74]);
 		emu.registers[0x2] = 0x10;
@@ -151,7 +165,32 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_add_carry() {
+	fn math_bit_add_vf_as_vx()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x8F, 0x74]);
+		emu.registers[0xF] = 0x10;
+		emu.registers[0x7] = 0x33;
+		emu.tick();
+		assert_eq!(emu.registers[0x7], 0x33);
+		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
+	}
+
+	#[test]
+	fn math_bit_add_vf_as_vy()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x87, 0xF4]);
+		emu.registers[0xF] = 0x10;
+		emu.registers[0x7] = 0x33;
+		emu.tick();
+		assert_eq!(emu.registers[0x7], 0x33 + 0x10);
+		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
+	}
+
+	#[test]
+	fn math_bit_add_carry()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x74]);
 		emu.registers[0x2] = 0xF0;
@@ -163,28 +202,32 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_sub() {
+	fn math_bit_sub()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x75]);
-		emu.registers[0x2] = 0x10;
-		emu.registers[0x7] = 0x33;
+		emu.registers[0x2] = 0x4B;
+		emu.registers[0x7] = 0x2D;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0x10, 0x33));
-		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
-	}
-	#[test]
-	fn math_bit_sub_borrow() {
-		let mut emu = Chip8::new();
-		emu.load_code(vec![0x82, 0x75]);
-		emu.registers[0x2] = 0xF0;
-		emu.registers[0x7] = 0x33;
-		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0xF0, 0x33));
-		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
+		assert_eq!(emu.registers[0x2], 0x1E);
+		assert_eq!(emu.registers[0xF], 0x01, "VF incorrectly set");
 	}
 
 	#[test]
-	fn math_bit_shr() {
+	fn math_bit_sub_borrow()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x82, 0x75]);
+		emu.registers[0x2] = 0x2D;
+		emu.registers[0x7] = 0x4B;
+		emu.tick();
+		assert_eq!(emu.registers[0x2], 0xE2);
+		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
+	}
+
+	#[test]
+	fn math_bit_shr()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x06]);
 		emu.registers[0x2] = 0x10;
@@ -194,7 +237,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_shr2() {
+	fn math_bit_shr2()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x06]);
 		emu.registers[0x2] = 0x11;
@@ -204,28 +248,31 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_subn_borrow() {
+	fn math_bit_subn_borrow()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x77]);
-		emu.registers[0x2] = 0x33;
-		emu.registers[0x7] = 0x10;
+		emu.registers[0x2] = 0x4B;
+		emu.registers[0x7] = 0x2D;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0x10, 0x33));
-		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
+		assert_eq!(emu.registers[0x2], 0xE2);
+		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
 	}
 	#[test]
-	fn math_bit_subn() {
+	fn math_bit_subn()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x77]);
-		emu.registers[0x2] = 0x33;
-		emu.registers[0x7] = 0xF0;
+		emu.registers[0x2] = 0x2D;
+		emu.registers[0x7] = 0x4B;
 		emu.tick();
-		assert_eq!(emu.registers[0x2], u8::wrapping_sub(0xF0, 0x33));
-		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
+		assert_eq!(emu.registers[0x2], 0x1E);
+		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
 	}
 
 	#[test]
-	fn math_bit_shl() {
+	fn math_bit_shl()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x0E]);
 		emu.registers[0x2] = 0x78;
@@ -235,7 +282,8 @@ mod tests {
 	}
 
 	#[test]
-	fn math_bit_shl2() {
+	fn math_bit_shl2()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x0E]);
 		emu.registers[0x2] = 0x83;
@@ -245,7 +293,8 @@ mod tests {
 	}
 
 	#[test]
-	fn skip_ne2() {
+	fn skip_ne2()
+	{
 		let mut emu = Chip8::new();
 		emu.registers[0x3] = 0x33;
 		emu.registers[0x4] = 0x33;
@@ -261,7 +310,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_i() {
+	fn set_i()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xA3, 0x20]);
 		emu.tick();
@@ -269,7 +319,8 @@ mod tests {
 	}
 
 	#[test]
-	fn jump_offset() {
+	fn jump_offset()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xB3, 0x20]);
 		emu.registers[0x0] = 0x4;
@@ -278,7 +329,8 @@ mod tests {
 	}
 
 	#[test]
-	fn rand() {
+	fn rand()
+	{
 		//todo replace with seeded rng
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xC3, 0x0f]);
@@ -288,7 +340,8 @@ mod tests {
 	}
 
 	#[test]
-	fn draw_sprite() {
+	fn draw_sprite()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xD3, 0x11]);
 		emu.registers[0x3] = 62;
@@ -301,7 +354,8 @@ mod tests {
 	}
 
 	#[test]
-	fn draw_sprite_erase() {
+	fn draw_sprite_erase()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xD3, 0x11, 0xD4, 0x11]);
 		emu.registers[0x3] = 62;
@@ -317,7 +371,8 @@ mod tests {
 	}
 
 	#[test]
-	fn draw_sprite_highres() {
+	fn draw_sprite_highres()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xD3, 0x11]);
 		emu.registers[0x3] = 126;
@@ -330,7 +385,8 @@ mod tests {
 	}
 
 	#[test]
-	fn read_dt() {
+	fn read_dt()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF3, 0x07]);
 		emu.reg_dt = 0x3;
@@ -339,7 +395,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_dt() {
+	fn set_dt()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF3, 0x15]);
 		emu.registers[0x3] = 0x3;
@@ -348,7 +405,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_st() {
+	fn set_st()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF3, 0x18]);
 		emu.registers[0x3] = 0x3;
@@ -357,7 +415,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_vi() {
+	fn set_vi()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF3, 0x1E]);
 		emu.registers[0x3] = 0x3;
@@ -366,7 +425,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_vi_to_digit() {
+	fn set_vi_to_digit()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF3, 0x29]);
 		emu.registers[0x3] = 0x3;
@@ -375,7 +435,8 @@ mod tests {
 	}
 
 	#[test]
-	fn set_bcd() {
+	fn set_bcd()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF3, 0x33]);
 		emu.registers[0x3] = 128;
@@ -387,16 +448,19 @@ mod tests {
 	}
 
 	#[test]
-	fn store() {
+	fn store()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF4, 0x55]);
-		for i in 0..0x4 {
+		for i in 0..0x4
+		{
 			emu.registers[i] = i as u8;
 		}
 		emu.registers[0x5] = 0x9;
 		emu.reg_i = 0x300;
 		emu.tick();
-		for i in 0..0x4 {
+		for i in 0..0x4
+		{
 			assert_eq!(emu.ram[0x300 + i], i as u8);
 		}
 		assert_eq!(emu.ram[emu.reg_i as usize + 0x5], 0, "Wrote too much");
@@ -404,16 +468,19 @@ mod tests {
 	}
 
 	#[test]
-	fn read() {
+	fn read()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF4, 0x65]);
 		emu.reg_i = 0x300;
-		for i in 0..0x4 {
+		for i in 0..0x4
+		{
 			emu.ram[emu.reg_i as usize + i] = i as u8;
 		}
 		emu.ram[emu.reg_i as usize + 0x5] = 0x9;
 		emu.tick();
-		for i in 0..0x3 {
+		for i in 0..0x3
+		{
 			assert_eq!(emu.registers[i], i as u8);
 		}
 		assert_eq!(emu.registers[0x5], 0, "Wrote too much");
@@ -421,7 +488,8 @@ mod tests {
 	}
 
 	#[test]
-	fn bcd_and_read() {
+	fn bcd_and_read()
+	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xF2, 0x33, 0xF2, 0x65]);
 		emu.registers[0x2] = 128;

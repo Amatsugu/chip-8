@@ -517,6 +517,7 @@ impl Chip8
 				#[cfg(feature = "print")]
 				println!("OR V{} | V{}", reg, reg2);
 				self.registers[reg as usize] |= self.registers[reg2 as usize];
+				self.registers[0xf] = 0;
 			}
 			0x2 =>
 			{
@@ -524,6 +525,7 @@ impl Chip8
 				#[cfg(feature = "print")]
 				println!("AND V{} & V{}", reg, reg2);
 				self.registers[reg as usize] &= self.registers[reg2 as usize];
+				self.registers[0xf] = 0;
 			}
 			0x3 =>
 			{
@@ -531,6 +533,7 @@ impl Chip8
 				#[cfg(feature = "print")]
 				println!("XOR V{} ^ V{}", reg, reg2);
 				self.registers[reg as usize] ^= self.registers[reg2 as usize];
+				self.registers[0xf] = 0;
 			}
 			0x4 =>
 			{
@@ -540,8 +543,8 @@ impl Chip8
 				let vx = self.registers[reg as usize];
 				let vy = self.registers[reg2 as usize];
 				let r = vx as u16 + vy as u16;
-				self.registers[0xf] = if r > 255 { 1 } else { 0 };
 				self.registers[reg as usize] = (r & 0x00FF) as u8;
+				self.registers[0xf] = if r > 255 { 1 } else { 0 };
 			}
 			0x5 =>
 			{
@@ -550,8 +553,8 @@ impl Chip8
 				println!("SUB V{} - V{}", reg, reg2);
 				let vx = self.registers[reg as usize];
 				let vy = self.registers[reg2 as usize];
-				self.registers[0xf] = if vx > vy { 1 } else { 0 };
 				self.registers[reg as usize] = vx.wrapping_sub(vy);
+				self.registers[0xf] = if vx >= vy { 1 } else { 0 };
 			}
 			0x6 =>
 			{
@@ -559,8 +562,8 @@ impl Chip8
 				#[cfg(feature = "print")]
 				println!("SHR V{} >> 1", reg);
 				let vx = self.registers[reg as usize];
-				self.registers[0xf] = vx & 0x1;
 				self.registers[reg as usize] = vx >> 1;
+				self.registers[0xf] = vx & 0x1;
 			}
 			0x7 =>
 			{
@@ -569,8 +572,8 @@ impl Chip8
 				println!("SUBN V{} - V{}", reg, reg2);
 				let vx = self.registers[reg as usize];
 				let vy = self.registers[reg2 as usize];
-				self.registers[0xf] = if vy < vx { 1 } else { 0 };
 				self.registers[reg as usize] = vy.wrapping_sub(vx);
+				self.registers[0xf] = if vx > vy { 0 } else { 1 };
 			}
 			0xE =>
 			{
@@ -578,8 +581,8 @@ impl Chip8
 				#[cfg(feature = "print")]
 				println!("SHL V{} << 1", reg);
 				let vx = self.registers[reg as usize];
-				self.registers[0xf] = (vx & 0x80) >> 7;
 				self.registers[reg as usize] = vx << 1;
+				self.registers[0xf] = (vx & 0x80) >> 7;
 			}
 			_ => panic!("Invalid bitwise op"),
 		}
