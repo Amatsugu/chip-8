@@ -3,6 +3,7 @@ use std::time::SystemTime;
 use bevy::math::bool;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
+#[cfg(feature = "tracing")]
 use tracing::info_span;
 
 pub const SPRITE_WIDTH: usize = 8;
@@ -206,15 +207,16 @@ impl Chip8
 	{
 		#[cfg(feature = "tracing")]
 		let _ = info_span!("Tick").entered();
-		if let Ok(el) = self.timer.elapsed()
-			&& el.as_millis() >= 16
-		{
-			self.process_timers();
-		}
+
 		if !self.wait_for_vblank
 		{
 			self.process_instructions();
 			self.program_counter += 2;
+		}
+		if let Ok(el) = self.timer.elapsed()
+			&& el.as_millis() > 16
+		{
+			self.process_timers();
 		}
 	}
 
@@ -478,12 +480,14 @@ impl Chip8
 		}
 	}
 
+	#[allow(dead_code)]
 	const fn get_translation(value: u8, size: usize) -> u32
 	{
 		let screen_width = size as u32;
 		screen_width - ((value as u32 + (SPRITE_WIDTH as u32)) % screen_width)
 	}
 
+	#[allow(dead_code)]
 	// #[cfg(feature = "schip")]
 	fn translate_sprite_row(&self, row: u8, x: u8) -> u128
 	{
