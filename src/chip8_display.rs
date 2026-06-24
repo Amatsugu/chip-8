@@ -116,6 +116,8 @@ pub fn render_image(
 	color2: LinearRgba,
 ) -> ImageBuffer<image::Rgba<u8>, Vec<u8>>
 {
+	#[cfg(feature = "tracing")]
+	let _ = info_span!("Render Image").entered();
 	let mut image = ImageBuffer::new(DISPLAY_WIDTH_HIGHRES as u32, DISPLAY_HEIGHT_HIGHRES as u32);
 
 	image.par_enumerate_pixels_mut().for_each(|(x, y, pixel)| {

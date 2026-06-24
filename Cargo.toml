@@ -9,9 +9,11 @@ image = "0.25.10"
 rand = "0.10.1"
 rand_pcg = "0.10.2"
 rayon = "1.12.0"
+tracing = "0.1.44"
 
 [features]
 default = ["chip8"]
 print = []
 schip = []
 chip8 = []
+tracing = ["bevy/trace", "bevy/trace_tracy"]

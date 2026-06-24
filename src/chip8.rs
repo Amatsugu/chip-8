@@ -3,6 +3,7 @@ use std::time::SystemTime;
 use bevy::math::bool;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
+use tracing::info_span;
 
 pub const SPRITE_WIDTH: usize = 8;
 pub const DISPLAY_SIZE: usize = 32;
@@ -203,16 +204,17 @@ impl Chip8
 
 	pub fn tick(&mut self)
 	{
+		#[cfg(feature = "tracing")]
+		let _ = info_span!("Tick").entered();
+		if let Ok(el) = self.timer.elapsed()
+			&& el.as_millis() >= 16
+		{
+			self.process_timers();
+		}
 		if !self.wait_for_vblank
 		{
 			self.process_instructions();
 			self.program_counter += 2;
-		}
-		if let Ok(el) = self.timer.elapsed()
-			&& el.as_millis() > 16
-		{
-			self.process_timers();
-			self.timer = SystemTime::now();
 		}
 	}
 
@@ -226,6 +228,7 @@ impl Chip8
 		{
 			self.reg_st -= 1;
 		}
+		self.timer = SystemTime::now();
 	}
 
 	pub fn set_key(&mut self, key: usize, state: bool)
@@ -235,6 +238,8 @@ impl Chip8
 
 	fn process_instructions(&mut self)
 	{
+		#[cfg(feature = "tracing")]
+		let _ = info_span!("Process Instructions").entered();
 		let b1 = &self.ram[self.program_counter];
 		let b2 = &self.ram[self.program_counter + 1];
 		let instruction = ((*b1 as u16) << 8) + (*b2 as u16);
