@@ -2,7 +2,6 @@ pub mod chip8;
 pub mod chip8_display;
 pub mod tests;
 
-#[cfg(debug_assertions)]
 use bevy::window::WindowResolution;
 use bevy::{
 	image::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor},
@@ -21,7 +20,6 @@ fn main()
 					primary_window: Some(Window {
 						title: "Chip 8".into(),
 						name: Some("Chip8".into()),
-						#[cfg(debug_assertions)]
 						resolution: WindowResolution::new(640., 320.),
 						present_mode: PresentMode::AutoNoVsync,
 						resizable: false,

@@ -4,6 +4,13 @@ use bevy::math::bool;
 use rand::{RngCore, SeedableRng};
 use rand_pcg::Pcg32;
 
+pub const SPRITE_WIDTH: usize = 8;
+pub const DISPLAY_SIZE: usize = 32;
+pub const DISPLAY_WIDTH: usize = DISPLAY_SIZE * 2;
+pub const DISPLAY_HEIGHT: usize = DISPLAY_SIZE;
+pub const DISPLAY_WIDTH_HIGHRES: usize = DISPLAY_WIDTH * 2;
+pub const DISPLAY_HEIGHT_HIGHRES: usize = DISPLAY_HEIGHT * 2;
+
 pub struct Chip8
 {
 	pub program_counter: usize,
@@ -23,6 +30,7 @@ pub struct Chip8
 
 	pub need_draw: bool,
 
+	wait_for_vblank: bool,
 	timer: SystemTime,
 	rng: Pcg32,
 }
@@ -38,7 +46,7 @@ impl Default for Chip8
 			reg_i: Default::default(),
 			ram: [0; MEMORY_CAPACITY],
 			stack: Default::default(),
-			display: [0; 64],
+			display: [0; DISPLAY_HEIGHT_HIGHRES],
 			reg_st: Default::default(),
 			reg_dt: Default::default(),
 			is_halted: Default::default(),
@@ -47,6 +55,7 @@ impl Default for Chip8
 			keys: Default::default(),
 			timer: SystemTime::now(),
 			rng: Pcg32::from_os_rng(),
+			wait_for_vblank: false,
 		}
 	}
 }
@@ -118,6 +127,11 @@ impl Chip8
 		}
 	}
 
+	pub fn vblank(&mut self)
+	{
+		self.wait_for_vblank = false;
+	}
+
 	pub fn print_display(&self)
 	{
 		if self.high_res
@@ -151,13 +165,13 @@ impl Chip8
 		}
 	}
 
-	// fn zero_registers(&mut self) -> &mut Self {
-	// 	self.registers = [0; 16];
-	// 	self.reg_st = 0;
-	// 	self.reg_dt = 0;
-	// 	self.reg_i = 0;
-	// 	return self;
-	// }
+	pub fn zero_registers(&mut self)
+	{
+		self.registers = [0; 16];
+		self.reg_st = 0;
+		self.reg_dt = 0;
+		self.reg_i = 0;
+	}
 
 	pub fn start(&mut self)
 	{
@@ -189,14 +203,17 @@ impl Chip8
 
 	pub fn tick(&mut self)
 	{
-		self.process_instructions();
+		if !self.wait_for_vblank
+		{
+			self.process_instructions();
+			self.program_counter += 2;
+		}
 		if let Ok(el) = self.timer.elapsed()
 			&& el.as_millis() > 16
 		{
 			self.process_timers();
 			self.timer = SystemTime::now();
 		}
-		self.program_counter += 2;
 	}
 
 	fn process_timers(&mut self)
@@ -270,7 +287,7 @@ impl Chip8
 			{
 				//Get Key
 				#[cfg(feature = "print")]
-				println!("Wait for Any Key", reg);
+				println!("Wait for Any Key");
 				let mut key = None;
 				for k in 0..16
 				{
@@ -375,6 +392,29 @@ impl Chip8
 			_ => (),
 		};
 	}
+	fn get_display_height(&self) -> usize
+	{
+		if self.high_res
+		{
+			DISPLAY_HEIGHT_HIGHRES
+		}
+		else
+		{
+			DISPLAY_HEIGHT
+		}
+	}
+
+	fn get_display_width(&self) -> usize
+	{
+		if self.high_res
+		{
+			DISPLAY_WIDTH_HIGHRES
+		}
+		else
+		{
+			DISPLAY_WIDTH
+		}
+	}
 
 	fn instruction_draw(&mut self, instruction: u16)
 	{
@@ -385,17 +425,21 @@ impl Chip8
 		let n = instruction & 0x000F;
 		#[cfg(feature = "print")]
 		println!("DRW  (V{}, V{})", regx, regy);
+		self.registers[0xF] = 0;
 		self.need_draw = true;
 		self.draw_sprite(x, y, n);
+		self.wait_for_vblank = true;
 	}
 
-	fn draw_sprite(&mut self, x: u8, y: u8, size: u16)
+	fn draw_sprite(&mut self, x: u8, y: u8, sprite_height: u16)
 	{
-		let slice = self.ram.iter().skip(self.reg_i as usize).take(size as usize);
-		let mut s_y = y as usize;
+		let slice = self.ram.iter().skip(self.reg_i as usize).take(sprite_height as usize);
+		let screen_height = self.get_display_height();
+		let mut s_y = (y as usize) % screen_height;
+		let x = x % (self.get_display_width() as u8);
 		for row in slice
 		{
-			let data = self.translate_sprite_row(*row, x);
+			let data = self.translate_sprite_row_clipped(*row, x);
 			let orig = self.display[s_y];
 			self.display[s_y] = orig ^ data;
 
@@ -405,29 +449,49 @@ impl Chip8
 			}
 
 			s_y += 1;
-			if self.high_res
+			if s_y >= screen_height
 			{
-				s_y %= 64;
+				break;
 			}
-			else
-			{
-				s_y %= 32;
-			}
+			s_y %= screen_height;
 		}
 	}
 
+	// #[cfg(all(feature = "chip8", not(feature = "schip")))]
+	fn translate_sprite_row_clipped(&self, row: u8, x: u8) -> u128
+	{
+		if self.high_res
+		{
+			let row = row as u128;
+			(row << (DISPLAY_WIDTH_HIGHRES - SPRITE_WIDTH)) >> x as u128
+		}
+		else
+		{
+			let row = row as u64;
+			let row = (row << (DISPLAY_WIDTH - SPRITE_WIDTH)) >> x as u64;
+			(row as u128) << DISPLAY_WIDTH
+		}
+	}
+
+	const fn get_translation(value: u8, size: usize) -> u32
+	{
+		let screen_width = size as u32;
+		screen_width - ((value as u32 + (SPRITE_WIDTH as u32)) % screen_width)
+	}
+
+	// #[cfg(feature = "schip")]
 	fn translate_sprite_row(&self, row: u8, x: u8) -> u128
 	{
 		if self.high_res
 		{
 			let res = row as u128;
-			res.rotate_left(128 - ((x as u32 + 8) % 128))
+			res.rotate_left(Self::get_translation(x, DISPLAY_WIDTH_HIGHRES))
 		}
 		else
 		{
 			let mut res = row as u64;
-			res = res.rotate_left(64 - ((x as u32 + 8) % 64));
-			(res as u128) << 64
+			res = res.rotate_left(Self::get_translation(x, DISPLAY_WIDTH));
+			(res as u128) << DISPLAY_WIDTH
 		}
 	}
 
@@ -449,10 +513,21 @@ impl Chip8
 	fn instruction_jump_offset(&mut self, instruction: u16)
 	{
 		let addr = instruction & 0x0FFF;
-		#[cfg(feature = "print")]
-		println!("JUMP {} + V0", addr);
-		self.program_counter = (addr + self.registers[0] as u16) as usize;
-		self.program_counter -= 2;
+		#[cfg(all(feature = "chip8", not(feature = "schip")))]
+		{
+			#[cfg(feature = "print")]
+			println!("JUMP {} + Vx", addr);
+			self.program_counter = (addr + self.registers[0] as u16) as usize;
+			self.program_counter -= 2;
+		}
+		#[cfg(feature = "schip")]
+		{
+			#[cfg(feature = "print")]
+			println!("JUMP {} + Vx", addr);
+			let reg = (addr & 0xF00) >> 8;
+			self.program_counter = (addr + self.registers[reg as usize] as u16) as usize;
+			self.program_counter -= 2;
+		}
 	}
 
 	fn instruction_set_reg_i(&mut self, instruction: u16)
@@ -561,9 +636,18 @@ impl Chip8
 				//SHR
 				#[cfg(feature = "print")]
 				println!("SHR V{} >> 1", reg);
-				let vx = self.registers[reg as usize];
-				self.registers[reg as usize] = vx >> 1;
-				self.registers[0xf] = vx & 0x1;
+				#[cfg(all(feature = "chip8", not(feature = "schip")))]
+				{
+					let vy = self.registers[reg2 as usize];
+					self.registers[reg as usize] = vy >> 1;
+					self.registers[0xf] = vy & 0x1;
+				}
+				#[cfg(feature = "schip")]
+				{
+					let vx = self.registers[reg as usize];
+					self.registers[reg as usize] = vx >> 1;
+					self.registers[0xf] = vx & 0x1;
+				}
 			}
 			0x7 =>
 			{
@@ -580,9 +664,18 @@ impl Chip8
 				//SHL
 				#[cfg(feature = "print")]
 				println!("SHL V{} << 1", reg);
-				let vx = self.registers[reg as usize];
-				self.registers[reg as usize] = vx << 1;
-				self.registers[0xf] = (vx & 0x80) >> 7;
+				#[cfg(all(feature = "chip8", not(feature = "schip")))]
+				{
+					let vy = self.registers[reg2 as usize];
+					self.registers[reg as usize] = vy << 1;
+					self.registers[0xf] = (vy & 0x80) >> 7;
+				}
+				#[cfg(feature = "schip")]
+				{
+					let vx = self.registers[reg as usize];
+					self.registers[reg as usize] = vx << 1;
+					self.registers[0xf] = (vx & 0x80) >> 7;
+				}
 			}
 			_ => panic!("Invalid bitwise op"),
 		}

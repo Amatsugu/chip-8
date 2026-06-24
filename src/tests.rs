@@ -226,6 +226,7 @@ mod tests
 	}
 
 	#[test]
+	#[cfg(feature = "schip")]
 	fn math_bit_shr()
 	{
 		let mut emu = Chip8::new();
@@ -237,11 +238,36 @@ mod tests
 	}
 
 	#[test]
+	#[cfg(feature = "schip")]
 	fn math_bit_shr2()
 	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x06]);
 		emu.registers[0x2] = 0x11;
+		emu.tick();
+		assert_eq!(emu.registers[0x2], 0x11 >> 1);
+		assert_eq!(emu.registers[0xF], 1);
+	}
+
+	#[test]
+	#[cfg(all(feature = "chip8", not(feature = "schip")))]
+	fn math_bit_shr()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x82, 0x16]);
+		emu.registers[0x1] = 0x10;
+		emu.tick();
+		assert_eq!(emu.registers[0x2], 0x10 >> 1);
+		assert_eq!(emu.registers[0xF], 0);
+	}
+
+	#[test]
+	#[cfg(all(feature = "chip8", not(feature = "schip")))]
+	fn math_bit_shr2()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x82, 0x16]);
+		emu.registers[0x1] = 0x11;
 		emu.tick();
 		assert_eq!(emu.registers[0x2], 0x11 >> 1);
 		assert_eq!(emu.registers[0xF], 1);
@@ -271,6 +297,7 @@ mod tests
 	}
 
 	#[test]
+	#[cfg(feature = "schip")]
 	fn math_bit_shl()
 	{
 		let mut emu = Chip8::new();
@@ -282,11 +309,36 @@ mod tests
 	}
 
 	#[test]
+	#[cfg(all(feature = "chip8", not(feature = "schip")))]
+	fn math_bit_shl()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x82, 0x1E]);
+		emu.registers[0x1] = 0x78;
+		emu.tick();
+		assert_eq!(emu.registers[0x2], 0x78 << 1);
+		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
+	}
+
+	#[test]
+	#[cfg(feature = "schip")]
 	fn math_bit_shl2()
 	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0x82, 0x0E]);
 		emu.registers[0x2] = 0x83;
+		emu.tick();
+		assert_eq!(emu.registers[0x2], 0x83 << 1);
+		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
+	}
+
+	#[test]
+	#[cfg(all(feature = "chip8", not(feature = "schip")))]
+	fn math_bit_shl2()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0x82, 0x1E]);
+		emu.registers[0x1] = 0x83;
 		emu.tick();
 		assert_eq!(emu.registers[0x2], 0x83 << 1);
 		assert_eq!(emu.registers[0xF], 1, "VF incorrectly set");
@@ -319,11 +371,23 @@ mod tests
 	}
 
 	#[test]
+	#[cfg(all(feature = "chip8", not(feature = "schip")))]
 	fn jump_offset()
 	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xB3, 0x20]);
 		emu.registers[0x0] = 0x4;
+		emu.tick();
+		assert_eq!(emu.program_counter, 0x320 + 0x4);
+	}
+
+	#[test]
+	#[cfg(feature = "schip")]
+	fn jump_offset()
+	{
+		let mut emu = Chip8::new();
+		emu.load_code(vec![0xB3, 0x20]);
+		emu.registers[0x3] = 0x4;
 		emu.tick();
 		assert_eq!(emu.program_counter, 0x320 + 0x4);
 	}
