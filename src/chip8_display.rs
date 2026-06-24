@@ -1,9 +1,7 @@
 use std::{env, fs};
 
-use bevy::{asset::RenderAssetUsages, prelude::*};
+use bevy::{asset::RenderAssetUsages, diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use image::ImageBuffer;
-#[cfg(debug_assertions)]
-use iyes_perf_ui::{PerfUiPlugin, prelude::PerfUiEntryFPS};
 use rayon::prelude::*;
 
 use crate::chip8::{Chip8, DISPLAY_HEIGHT_HIGHRES, DISPLAY_WIDTH, DISPLAY_WIDTH_HIGHRES};
@@ -35,11 +33,7 @@ impl Plugin for Chip8Plugin
 		app.add_systems(Startup, setup);
 		app.add_systems(Update, (chip_input, chip_tick, chip_render).chain());
 
-		#[cfg(debug_assertions)]
-		{
-			use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-			app.add_plugins(FrameTimeDiagnosticsPlugin).add_plugins(PerfUiPlugin);
-		}
+		app.add_plugins(FrameTimeDiagnosticsPlugin::default());
 	}
 }
 
@@ -48,8 +42,7 @@ struct DisplayImage(pub Handle<Image>);
 
 fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chip8CPU>)
 {
-	#[cfg(debug_assertions)]
-	commands.spawn(PerfUiEntryFPS::default());
+	// commands.spawn(DiagnosticsOverlay::fps());
 	commands.spawn(Camera2d);
 	let img_data = render_image(cpu.0.display, cpu.0.high_res, LinearRgba::BLACK, LinearRgba::BLACK);
 	let handle = images.add(Image::from_dynamic(
@@ -75,11 +68,12 @@ fn chip_render(mut cpu: ResMut<Chip8CPU>, mut images: ResMut<Assets<Image>>, img
 		LinearRgba::rgb(89. / 255., 0., 36. / 255.),
 		LinearRgba::rgb(1., 0., 100. / 255.),
 	);
-	images.insert(
-		img.0.id(),
-		Image::from_dynamic(img_data.into(), true, RenderAssetUsages::RENDER_WORLD),
-	);
-	cpu.0.need_draw = false;
+	images
+		.insert(
+			img.0.id(),
+			Image::from_dynamic(img_data.into(), true, RenderAssetUsages::RENDER_WORLD),
+		)
+		.expect("Failed to insert image");
 	cpu.0.vblank();
 }
 
@@ -89,7 +83,7 @@ fn chip_tick(mut cpu: ResMut<Chip8CPU>)
 	{
 		return;
 	}
-	cpu.0.tick();
+	cpu.0.run(4);
 }
 
 fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>)

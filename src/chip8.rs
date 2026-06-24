@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use bevy::math::bool;
-use rand::{RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg32;
 
 pub const SPRITE_WIDTH: usize = 8;
@@ -54,7 +54,7 @@ impl Default for Chip8
 			high_res: false,
 			keys: Default::default(),
 			timer: SystemTime::now(),
-			rng: Pcg32::from_os_rng(),
+			rng: Pcg32::seed_from_u64(5),
 			wait_for_vblank: false,
 		}
 	}
