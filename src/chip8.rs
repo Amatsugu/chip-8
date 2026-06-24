@@ -231,6 +231,7 @@ impl Chip8
 			self.reg_st -= 1;
 		}
 		self.timer = SystemTime::now();
+		self.wait_for_vblank = true;
 	}
 
 	pub fn set_key(&mut self, key: usize, state: bool)
@@ -772,6 +773,8 @@ impl Chip8
 	{
 		#[cfg(feature = "print")]
 		println!("CLS");
+		self.need_draw = true;
+		self.wait_for_vblank;
 		self.display = [0; 64];
 	}
 
