@@ -6,6 +6,7 @@ use rayon::prelude::*;
 
 use crate::chip8::{Chip8, DISPLAY_HEIGHT_HIGHRES, DISPLAY_WIDTH, DISPLAY_WIDTH_HIGHRES};
 
+const FPS: f32 = 60.;
 pub struct Chip8Plugin;
 
 #[derive(Resource)]
@@ -29,7 +30,7 @@ impl Plugin for Chip8Plugin
 		let mut cpu = Chip8::new();
 		cpu.load_code(bytes);
 
-		app.insert_resource(Chip8CPU(cpu, Timer::from_seconds(1.0 / 60., TimerMode::Repeating)));
+		app.insert_resource(Chip8CPU(cpu, Timer::from_seconds(1.0 / FPS, TimerMode::Repeating)));
 		app.add_systems(Startup, setup);
 		app.add_systems(Update, (chip_input, chip_tick, chip_render).chain());
 
