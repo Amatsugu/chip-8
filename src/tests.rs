@@ -2,7 +2,7 @@
 mod tests
 {
 
-	use crate::chip8::{CHIP_DIGITS, Chip8};
+	use crate::chip8::Chip8;
 
 	#[test]
 	fn jump()

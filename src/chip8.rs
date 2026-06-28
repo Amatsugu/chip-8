@@ -767,11 +767,11 @@ impl Chip8
 		let mode = instruction & 0x00FF;
 		match mode
 		{
-			0xC0..=0xCF => self.instruction_scroll_down_display((mode & 0x0F) as u8),
+			0xC0..=0xCF => self.instruction_scroll_display_down((mode & 0x0F) as u8),
 			0xE0 => self.instruction_clear(),
 			0xEE => self.instruction_ret(),
-			0xFB => self.instruction_horizontal_scoll_display(4),
-			0xFC => self.instruction_horizontal_scoll_display(-4),
+			0xFB => self.instruction_scoll_display_right(),
+			0xFC => self.instruction_scoll_display_left(),
 			0xFD =>
 			{
 				self.is_halted = true;
@@ -791,9 +791,32 @@ impl Chip8
 		}
 	}
 
-	fn instruction_scroll_down_display(&mut self, lines: u8) {}
-	fn instruction_horizontal_scoll_display(&mut self, dir: i32) {}
+	fn instruction_scroll_display_down(&mut self, lines: u8)
+	{
+		let height = self.get_display_height();
+		let mut scrolled = [0; 64];
+		let lines = lines as usize;
+		for (i, line) in self.display.iter().enumerate().take(height - lines)
+		{
+			scrolled[i + lines] = *line;
+		}
+		self.display = scrolled;
+	}
+	fn instruction_scoll_display_left(&mut self)
+	{
+		for line in &mut self.display
+		{
+			*line = *line << 4;
+		}
+	}
 
+	fn instruction_scoll_display_right(&mut self)
+	{
+		for line in &mut self.display
+		{
+			*line = *line >> 4;
+		}
+	}
 	fn instruction_clear(&mut self)
 	{
 		#[cfg(feature = "print")]
