@@ -409,9 +409,10 @@ mod tests
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xD3, 0x11]);
 		emu.registers[0x3] = 62;
-		//Draw a line at (62,0) wrapping around
+		//Draw a line at (62,0) clipping on the right
 		emu.tick();
-		let expected = (u64::rotate_left(CHIP_DIGITS[0] as u64, 58) as u128) << 64;
+		let expected = 0x3 << 64;
+		println!("{:b}", expected);
 		println!("{:b}", emu.display[0]);
 		assert_eq!(emu.display[0], expected);
 		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
@@ -422,12 +423,12 @@ mod tests
 	{
 		let mut emu = Chip8::new();
 		emu.load_code(vec![0xD3, 0x11, 0xD4, 0x11]);
-		emu.registers[0x3] = 62;
-		emu.registers[0x4] = 0;
-		//Draw a line at (62,0) wrapping around
+		emu.registers[0x3] = 0;
+		emu.registers[0x4] = 2;
 		emu.tick();
+		emu.vblank();
 		emu.tick();
-		let expected = (3458764513820540931 as u128) << 64;
+		let expected = 0b110011 << 128 - 6;
 		println!("{:b}", expected);
 		println!("{:b}", emu.display[0]);
 		assert_eq!(emu.display[0], expected);
@@ -441,9 +442,9 @@ mod tests
 		emu.load_code(vec![0xD3, 0x11]);
 		emu.registers[0x3] = 126;
 		emu.high_res = true;
-		//Draw a line at (62,0) wrapping around
+		//Draw a line at (62,0) clipping
 		emu.tick();
-		let expected = u128::rotate_left(CHIP_DIGITS[0] as u128, 122);
+		let expected = 0b11;
 		assert_eq!(emu.display[0], expected);
 		assert_eq!(emu.registers[0xF], 0, "VF incorrectly set");
 	}

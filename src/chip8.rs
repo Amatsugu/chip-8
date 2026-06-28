@@ -231,7 +231,10 @@ impl Chip8
 			self.reg_st -= 1;
 		}
 		self.timer = SystemTime::now();
-		self.wait_for_vblank = true;
+		#[cfg(not(feature = "no-vblank"))]
+		{
+			self.wait_for_vblank = true;
+		}
 	}
 
 	pub fn set_key(&mut self, key: usize, state: bool)
@@ -436,7 +439,10 @@ impl Chip8
 		self.registers[0xF] = 0;
 		self.need_draw = true;
 		self.draw_sprite(x, y, n);
-		self.wait_for_vblank = true;
+		#[cfg(not(feature = "no-vblank"))]
+		{
+			self.wait_for_vblank = true;
+		}
 	}
 
 	fn draw_sprite(&mut self, x: u8, y: u8, sprite_height: u16)
@@ -758,16 +764,35 @@ impl Chip8
 
 	fn instruction_zero(&mut self, instruction: u16)
 	{
-		match instruction
+		let mode = instruction & 0x00FF;
+		match mode
 		{
-			0x00E0 => self.instruction_clear(),
-			0x00EE => self.instruction_ret(),
+			0xC0..=0xCF => self.instruction_scroll_down_display((mode & 0x0F) as u8),
+			0xE0 => self.instruction_clear(),
+			0xEE => self.instruction_ret(),
+			0xFB => self.instruction_horizontal_scoll_display(4),
+			0xFC => self.instruction_horizontal_scoll_display(-4),
+			0xFD =>
+			{
+				self.is_halted = true;
+			}
+			0xFF =>
+			{
+				self.high_res = true;
+			}
+			0xFE =>
+			{
+				self.high_res = false;
+			}
 			_ =>
 			{
 				self.is_halted = true;
 			}
 		}
 	}
+
+	fn instruction_scroll_down_display(&mut self, lines: u8) {}
+	fn instruction_horizontal_scoll_display(&mut self, dir: i32) {}
 
 	fn instruction_clear(&mut self)
 	{

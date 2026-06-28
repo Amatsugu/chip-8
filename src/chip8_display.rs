@@ -84,7 +84,7 @@ fn chip_tick(mut cpu: ResMut<Chip8CPU>)
 	{
 		return;
 	}
-	cpu.0.run(4);
+	cpu.0.run(60);
 }
 
 fn chip_input(mut cpu: ResMut<Chip8CPU>, key: Res<ButtonInput<KeyCode>>)
