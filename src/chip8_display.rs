@@ -30,7 +30,8 @@ impl Plugin for Chip8Plugin
 		let mut cpu = Chip8::new();
 		cpu.load_code(bytes);
 
-		app.insert_resource(Chip8CPU(cpu, Timer::from_seconds(1.0 / FPS, TimerMode::Repeating)));
+		app.insert_resource(Chip8CPU(cpu, Timer::from_seconds(1.0 / FPS, TimerMode::Repeating)))
+			.insert_resource(ClearColor(Color::srgb_u8(89, 0, 36)));
 		app.add_systems(Startup, setup);
 		app.add_systems(Update, (chip_input, chip_tick, chip_render).chain());
 
@@ -51,10 +52,11 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, cpu: Res<Chi
 		true,
 		RenderAssetUsages::RENDER_WORLD,
 	));
-	let mut sprite = Sprite::from_image(handle.clone());
-	sprite.custom_size = Some(Vec2::new(640., 320.));
-	commands.spawn(sprite);
-	commands.insert_resource(DisplayImage(handle));
+	commands.insert_resource(DisplayImage(handle.clone()));
+	commands.queue_spawn_scene(bsn! {
+		Node{ width: percent(100), height: percent(100)}
+		ImageNode{ image: handle}
+	});
 }
 
 fn chip_render(mut cpu: ResMut<Chip8CPU>, mut images: ResMut<Assets<Image>>, img: Res<DisplayImage>, time: Res<Time>)

@@ -2,6 +2,7 @@ pub mod chip8;
 pub mod chip8_display;
 pub mod tests;
 
+use crate::chip8::DISPLAY_HEIGHT;
 use bevy::window::WindowResolution;
 use bevy::{
 	image::{ImageAddressMode, ImageFilterMode, ImageSamplerDescriptor},
@@ -9,6 +10,7 @@ use bevy::{
 	window::PresentMode,
 };
 use chip8_display::Chip8Plugin;
+const WINDOW_SIZE: u32 = 20 * DISPLAY_HEIGHT as u32;
 
 fn main()
 {
@@ -20,9 +22,9 @@ fn main()
 					primary_window: Some(Window {
 						title: "Chip 8".into(),
 						name: Some("Chip8".into()),
-						resolution: WindowResolution::new(640, 320),
+						resolution: WindowResolution::new(WINDOW_SIZE * 2, WINDOW_SIZE),
 						present_mode: PresentMode::AutoNoVsync,
-						resizable: false,
+						resizable: true,
 						..default()
 					}),
 					..default()
